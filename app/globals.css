@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #07090d;
+  --surface: #0f141c;
+  --surface-2: #141b26;
+  --line: #1c2533;
+  --ink: #e6eaf0;
+  --muted: #8a96a8;
+  --primary: #2563eb;
+  --primary-hi: #3b82f6;
+  --accent: #60a5fa;
+  --warn: #f5b454;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hi: var(--primary-hi);
+  --color-accent: var(--accent);
+  --color-warn: var(--warn);
+  --font-sans: var(--font-inter);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgba(37, 99, 235, 0.18), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Quote page: light, printable document. */
+.quote-page {
+  color-scheme: light;
+  background: #e9edf3;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  body,
+  .quote-page {
+    background: #fff !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .quote-sheet {
+    box-shadow: none !important;
+    margin: 0 !important;
+    max-width: none !important;
+    border-radius: 0 !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
