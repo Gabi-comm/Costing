@@ -30,7 +30,7 @@ export default function DotPortrait({ className = "" }: { className?: string }) 
         const i = y * cols + x;
         const v = parseInt(levels[i], 16) / 15;
         const d = Math.hypot((x + 0.5) / cols - 0.5, (y + 0.5) / rows - 0.5) / 0.5;
-        const fade = Math.min(1, Math.max(0, (1.08 - d) / 0.3));
+        const fade = Math.min(1, Math.max(0, (1.12 - d) / 0.28));
         const s = v * fade;
         if (s < 0.04) continue;
         idx.push(i);
@@ -45,7 +45,7 @@ export default function DotPortrait({ className = "" }: { className?: string }) 
     const groups: { style: string; dots: number[] }[] = [];
     for (const rgb of [FROST, WARM])
       for (let b = 0; b < BUCKETS; b++)
-        groups.push({ style: `rgba(${rgb}, ${(0.35 + 0.65 * (b / (BUCKETS - 1))).toFixed(3)})`, dots: [] });
+        groups.push({ style: `rgba(${rgb}, ${(0.5 + 0.5 * (b / (BUCKETS - 1))).toFixed(3)})`, dots: [] });
     for (let k = 0; k < n; k++) {
       const b = Math.min(BUCKETS - 1, Math.round(strength[k] * (BUCKETS - 1)));
       groups[(warm[idx[k]] === "1" ? BUCKETS : 0) + b].dots.push(k);
@@ -65,7 +65,7 @@ export default function DotPortrait({ className = "" }: { className?: string }) 
         hx[k] = px[k] = ((i % cols) + 0.5) * cell;
         hy[k] = py[k] = (Math.floor(i / cols) + 0.5) * cell;
         vx[k] = vy[k] = 0;
-        radius[k] = Math.max(0.4, Math.pow(strength[k], 0.85) * cell * 0.6);
+        radius[k] = Math.max(0.45, Math.pow(strength[k], 0.8) * cell * 0.62);
       }
     };
 
@@ -155,7 +155,7 @@ export default function DotPortrait({ className = "" }: { className?: string }) 
       ref={canvasRef}
       role="img"
       aria-label="Dot-art portrait of Gabriel John Solomon"
-      className={`block w-full touch-pan-y ${className}`}
+      className={`block w-full touch-pan-y [filter:drop-shadow(0_0_10px_rgba(202,220,234,0.35))] ${className}`}
       style={{ aspectRatio: `${PORTRAIT.cols} / ${PORTRAIT.rows}` }}
     />
   );

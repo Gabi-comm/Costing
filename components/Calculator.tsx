@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import ItemCard from "@/components/ItemCard";
 import ModifierGroup from "@/components/ModifierGroup";
+import { useTweenedNumber } from "@/components/motion";
 import SummaryPanel from "@/components/SummaryPanel";
 import { computeQuote, EMPTY_SELECTION, peso, type Selection } from "@/lib/compute";
 import { CATEGORIES, COMPLEXITY, DISCOUNTS, ITEM_BY_ID, ITEMS, type Complexity, type DiscountKind } from "@/lib/pricing";
@@ -35,6 +36,7 @@ export default function Calculator({ initial, persist }: Props) {
   }, [encoded, persist]);
 
   const quote = useMemo(() => computeQuote(selection), [selection]);
+  const shownTotal = useTweenedNumber(quote.total);
 
   const setQty = (id: string, qty: number) =>
     setSelection((s) => {
@@ -71,7 +73,7 @@ export default function Calculator({ initial, persist }: Props) {
   const blockedIds = new Set(quote.blocked.map((b) => b.item.id));
 
   return (
-    <div id="calculator" className="mx-auto max-w-7xl scroll-mt-4 px-4 pb-32 pt-16 sm:px-6 lg:pb-20 lg:pt-24">
+    <div id="calculator" className="mx-auto max-w-7xl scroll-mt-4 px-4 pb-10 pt-16 sm:px-6 lg:pb-12 lg:pt-24">
       <header className="mb-12 flex flex-wrap items-end justify-between gap-6">
         <div>
           <h2 className="headline font-display text-5xl font-normal leading-[0.95] tracking-tight sm:text-7xl">
@@ -196,7 +198,7 @@ export default function Calculator({ initial, persist }: Props) {
           Total{quote.monthly > 0 && <span className="tnum"> · +{peso(quote.monthly)}/mo</span>}
         </span>
         <span className="flex items-center gap-3">
-          <span className="tnum font-display text-2xl text-ink">{peso(quote.total)}</span>
+          <span className="tnum font-display text-2xl text-ink">{peso(shownTotal)}</span>
           <span className="rounded-full bg-frost px-3.5 py-1.5 text-xs font-semibold text-night">Review</span>
         </span>
       </a>

@@ -15,7 +15,7 @@ const { data } = await sharp(equalized).resize(COLS, ROWS, { fit: "fill" }).raw(
 const { data: color } = await sharp(src).resize(COLS, ROWS, { fit: "fill" }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
 
 // Background is ~0.24 luminance; lift the subject above it and let darks fall away.
-const LOW = Number(process.env.LOW ?? 0.04), HIGH = Number(process.env.HIGH ?? 0.85), GAMMA = Number(process.env.GAMMA ?? 1.35);
+const LOW = Number(process.env.LOW ?? 0.05), HIGH = Number(process.env.HIGH ?? 0.7), GAMMA = Number(process.env.GAMMA ?? 1.15);
 let levels = "", warm = "";
 for (let i = 0; i < COLS * ROWS; i++) {
   const [r, g, b] = [data[i * 3] / 255, data[i * 3 + 1] / 255, data[i * 3 + 2] / 255];

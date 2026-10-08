@@ -23,7 +23,7 @@ export default function ItemCard({ item, qty, onChange, blockedBy }: Props) {
     </span>
   );
 
-  const shell = `group relative flex h-full flex-col gap-3 overflow-hidden rounded-2xl border p-5 text-left backdrop-blur-xl transition duration-200 ${
+  const shell = `group relative flex h-full flex-col gap-3 overflow-hidden rounded-2xl border p-5 text-left backdrop-blur-xl transition-[border-color,background-color,box-shadow,transform] duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] active:scale-[0.985] ${
     selected
       ? "border-mist/70 bg-[linear-gradient(160deg,rgba(75,112,141,0.38),rgba(32,58,83,0.22))] shadow-[0_0_0_1px_rgba(144,176,199,0.35),0_18px_40px_-18px_rgba(144,176,199,0.55)]"
       : "border-line bg-[linear-gradient(180deg,rgba(144,176,199,0.07),rgba(144,176,199,0.02))] hover:border-mist/40 hover:bg-surface-2"
@@ -37,7 +37,7 @@ export default function ItemCard({ item, qty, onChange, blockedBy }: Props) {
           <span
             aria-hidden
             className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border text-xs transition ${
-              selected ? "border-frost bg-frost text-night shadow-[0_0_14px_rgba(202,220,234,0.6)]" : "border-line bg-night/40 text-transparent"
+              selected ? "animate-pop border-frost bg-frost text-night shadow-[0_0_14px_rgba(202,220,234,0.6)]" : "border-line bg-night/40 text-transparent"
             }`}
           >
             ✓

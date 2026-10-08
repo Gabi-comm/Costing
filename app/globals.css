@@ -125,3 +125,50 @@ body {
     print-color-adjust: exact;
   }
 }
+
+/* Summary rows: expand + fade in, collapse + fade out. */
+@theme {
+  --animate-row-in: row-in 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-row-out: row-out 280ms cubic-bezier(0.4, 0, 1, 1) both;
+  --animate-pop: pop 320ms cubic-bezier(0.2, 0.8, 0.2, 1.4) both;
+
+  @keyframes row-in {
+    from {
+      grid-template-rows: 0fr;
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      grid-template-rows: 1fr;
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes row-out {
+    from {
+      grid-template-rows: 1fr;
+      opacity: 1;
+    }
+    to {
+      grid-template-rows: 0fr;
+      opacity: 0;
+      transform: translateX(8px);
+    }
+  }
+  @keyframes pop {
+    0% {
+      transform: scale(0.6);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-row-in,
+  .animate-row-out,
+  .animate-pop {
+    animation: none;
+  }
+}

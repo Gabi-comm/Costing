@@ -2,7 +2,9 @@
 
 import { useSyncExternalStore } from "react";
 import Calculator, { DRAFT_KEY } from "@/components/Calculator";
+import Footer from "@/components/Footer";
 import Hero from "@/components/Hero";
+import Projects from "@/components/Projects";
 import { EMPTY_SELECTION } from "@/lib/compute";
 import { decodeQuote, EMPTY_INFO } from "@/lib/share";
 
@@ -33,11 +35,13 @@ export default function CalculatorPage() {
   return (
     <>
       <Hero />
+      <Projects />
       {source === null ? (
         <Calculator key="placeholder" persist={false} initial={{ selection: EMPTY_SELECTION, info: EMPTY_INFO, meta: null }} />
       ) : (
         <Calculator key="client" persist initial={decodeQuote(source)} />
       )}
+      <Footer />
     </>
   );
 }
