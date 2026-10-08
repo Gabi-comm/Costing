@@ -130,7 +130,7 @@ body {
 @theme {
   --animate-row-in: row-in 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-row-out: row-out 280ms cubic-bezier(0.4, 0, 1, 1) both;
-  --animate-pop: pop 320ms cubic-bezier(0.2, 0.8, 0.2, 1.4) both;
+  --animate-pop: pop 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
 
   @keyframes row-in {
     from {

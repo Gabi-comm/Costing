@@ -45,7 +45,7 @@ export default function ProjectCard({ project }: { project: Project }) {
 
         {/* Details: over the video on md+ (hover / focus), below it on phones (tap). */}
         <div
-          className={`${open ? "block" : "hidden"} mt-3 rounded-[20px] bg-night/75 p-5 backdrop-blur-xl [scrollbar-width:thin] [scrollbar-color:rgba(144,176,199,0.35)_transparent] md:absolute md:inset-0 md:mt-0 md:block md:overflow-y-auto md:p-5 md:opacity-0 md:transition md:duration-300 md:group-hover:opacity-100 md:group-focus-within:opacity-100 ${open ? "md:opacity-100" : "md:pointer-events-none md:group-hover:pointer-events-auto md:group-focus-within:pointer-events-auto"}`}
+          className={`${open ? "block" : "hidden"} mt-3 rounded-[20px] bg-night/75 p-5 backdrop-blur-xl [scrollbar-width:thin] [scrollbar-color:rgba(144,176,199,0.35)_transparent] md:absolute md:inset-0 md:mt-0 md:block md:overflow-y-auto md:p-4 md:opacity-0 md:transition md:duration-300 md:group-hover:opacity-100 md:group-focus-within:opacity-100 ${open ? "md:opacity-100" : "md:pointer-events-none md:group-hover:pointer-events-auto md:group-focus-within:pointer-events-auto"}`}
         >
           <div>
             <div>
@@ -70,7 +70,7 @@ export default function ProjectCard({ project }: { project: Project }) {
           </div>
 
           <p className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-mist">Every page</p>
-          <div className="-mx-1 mt-2 flex snap-x gap-2.5 overflow-x-auto px-1 pb-3 [scrollbar-width:thin] [scrollbar-color:rgba(144,176,199,0.35)_transparent]">
+          <div className="-mx-1 mt-1.5 flex snap-x gap-2.5 overflow-x-auto px-1 pb-1.5 [scrollbar-width:thin] [scrollbar-color:rgba(144,176,199,0.35)_transparent]">
             {project.shots.map((shot, i) => (
               <button
                 key={shot.src}

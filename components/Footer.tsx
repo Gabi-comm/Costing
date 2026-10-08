@@ -31,9 +31,7 @@ export default function Footer() {
           <p className="font-display text-xl tracking-tight text-ink">
             Gabi-<span className="font-serif italic text-frost">comm</span>
           </p>
-          <p className="mt-1 text-sm text-mist">
-            {FREELANCER.name} · {FREELANCER.role}
-          </p>
+          <p className="mt-1 text-sm text-mist">{FREELANCER.name}</p>
           <a
             href={WEBSITE}
             target="_blank"
