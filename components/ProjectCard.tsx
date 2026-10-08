@@ -69,14 +69,14 @@ export default function ProjectCard({ project }: { project: Project }) {
             </ul>
           </div>
 
-          <p className="mt-4 text-xs font-medium uppercase tracking-[0.18em] text-mist">Every page</p>
+          <p className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-mist">Every page</p>
           <div className="-mx-1 mt-2 flex snap-x gap-2.5 overflow-x-auto px-1 pb-3 [scrollbar-width:thin] [scrollbar-color:rgba(144,176,199,0.35)_transparent]">
             {project.shots.map((shot, i) => (
               <button
                 key={shot.src}
                 type="button"
                 onClick={() => setViewing(i)}
-                className="group/shot w-36 shrink-0 snap-start text-left sm:w-40"
+                className="group/shot w-32 shrink-0 snap-start text-left sm:w-36"
               >
                 <span className="block overflow-hidden rounded-xl border border-line bg-night">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
