@@ -2,6 +2,7 @@
 
 import { peso, type Quote } from "@/lib/compute";
 import { COMPLEXITY, type Complexity } from "@/lib/pricing";
+import TotalCurve from "./TotalCurve";
 
 interface Props {
   quote: Quote;
@@ -17,29 +18,6 @@ function Row({ label, value, tone = "mist" }: { label: string; value: string; to
     <div className={`flex items-baseline justify-between gap-4 text-sm ${tone === "frost" ? "text-frost" : "text-mist"}`}>
       <span>{label}</span>
       <span className="tnum whitespace-nowrap">{value}</span>
-    </div>
-  );
-}
-
-/** The reference's chart line with a glowing point, used as a quiet backdrop for the total. */
-function TotalCurve() {
-  return (
-    <div aria-hidden className="pointer-events-none relative -mx-6 mb-4 mt-5 h-20">
-      <div className="dot-grid absolute inset-0 [mask-image:linear-gradient(to_top,black,transparent)]" />
-      <svg viewBox="0 0 300 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
-        <path
-          d="M0 92 C 40 88, 55 70, 80 72 S 110 30, 130 40 S 160 85, 190 70 S 230 20, 255 18 S 290 14, 300 16"
-          fill="none"
-          stroke="rgba(237,243,248,0.55)"
-          strokeWidth="1.2"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
-      <span className="absolute right-[15%] top-[14%] grid h-10 w-10 -translate-y-1/2 translate-x-1/2 place-items-center rounded-full bg-frost/10">
-        <span className="grid h-6 w-6 place-items-center rounded-full bg-frost/20">
-          <span className="h-2.5 w-2.5 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.9)]" />
-        </span>
-      </span>
     </div>
   );
 }
@@ -109,7 +87,7 @@ export default function SummaryPanel({ quote, complexity, copied, onCopy, onOpen
         </div>
       </div>
 
-      <TotalCurve />
+      <TotalCurve total={quote.total} />
 
       <div className="grid gap-2">
         <button

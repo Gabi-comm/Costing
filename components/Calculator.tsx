@@ -74,9 +74,9 @@ export default function Calculator({ initial, persist }: Props) {
     <div id="calculator" className="mx-auto max-w-7xl scroll-mt-4 px-4 pb-32 pt-16 sm:px-6 lg:pb-20 lg:pt-24">
       <header className="mb-12 flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h1 className="headline font-display text-5xl font-normal leading-[0.95] tracking-tight sm:text-7xl">
+          <h2 className="headline font-display text-5xl font-normal leading-[0.95] tracking-tight sm:text-7xl">
             Build your <span className="font-serif italic text-frost">quote</span>
-          </h1>
+          </h2>
           <p className="mt-4 max-w-md text-base text-mist">
             Select services, set complexity and timeline, then send the client a quotation link or PDF.
           </p>
