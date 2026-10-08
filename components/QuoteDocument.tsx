@@ -12,24 +12,24 @@ export default function QuoteDocument({ selection, info, meta }: SharedQuote) {
   const pct = Math.round(DOWN_PAYMENT_RATE * 100);
 
   return (
-    <article className="quote-sheet mx-auto max-w-3xl overflow-hidden rounded-xl bg-white text-[#0b0f17] shadow-[0_20px_60px_-20px_rgba(7,9,13,0.45)]">
-      <header className="bg-[#07090d] px-6 py-7 text-white sm:px-10">
+    <article className="quote-sheet mx-auto max-w-3xl overflow-hidden rounded-xl bg-white text-[#091525] shadow-[0_20px_60px_-20px_rgba(9,21,37,0.45)]">
+      <header className="bg-[radial-gradient(80%_120%_at_0%_0%,#4b708d_0%,transparent_60%),linear-gradient(135deg,#203a53_0%,#091525_70%)] px-6 py-8 text-white sm:px-10">
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#60a5fa]">Quotation</p>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight">{info.project || "Project quotation"}</h1>
-            {info.client && <p className="mt-1 text-sm text-[#b9c3d3]">Prepared for {info.client}</p>}
+            <p className="font-serif text-xl italic text-[#cadcea]">Quotation</p>
+            <h1 className="mt-1 font-display text-3xl tracking-tight">{info.project || "Project quotation"}</h1>
+            {info.client && <p className="mt-1 text-sm text-[#cadcea]">Prepared for {info.client}</p>}
           </div>
           <dl className="tnum grid grid-cols-[auto_auto] gap-x-4 gap-y-1 text-sm">
-            <dt className="text-[#8a96a8]">No.</dt>
+            <dt className="text-[#90b0c7]">No.</dt>
             <dd className="font-semibold">{meta?.number ?? "Draft"}</dd>
-            <dt className="text-[#8a96a8]">Date</dt>
+            <dt className="text-[#90b0c7]">Date</dt>
             <dd>{fmtDate(issued)}</dd>
-            <dt className="text-[#8a96a8]">Valid until</dt>
+            <dt className="text-[#90b0c7]">Valid until</dt>
             <dd>{fmtDate(validUntil)}</dd>
           </dl>
         </div>
-        <div className="mt-6 h-1 w-16 rounded-full bg-[#2563eb]" />
+        <div className="mt-6 h-1 w-16 rounded-full bg-[#cadcea]" />
       </header>
 
       <div className="px-6 py-8 sm:px-10">
@@ -38,7 +38,7 @@ export default function QuoteDocument({ selection, info, meta }: SharedQuote) {
             <p className="text-xs font-semibold uppercase tracking-wider text-[#5b6677]">From</p>
             <p className="mt-1 font-semibold">{FREELANCER.name}</p>
             <p className="text-[#5b6677]">{FREELANCER.role}</p>
-            <p className="text-[#2563eb]">{FREELANCER.email}</p>
+            <p className="text-[#4b708d]">{FREELANCER.email}</p>
           </div>
           {info.notes && (
             <div>
@@ -50,7 +50,7 @@ export default function QuoteDocument({ selection, info, meta }: SharedQuote) {
 
         <table className="tnum w-full text-sm">
           <thead>
-            <tr className="border-b-2 border-[#0b0f17] text-left text-xs uppercase tracking-wider text-[#5b6677]">
+            <tr className="border-b-2 border-[#091525] text-left text-xs uppercase tracking-wider text-[#5b6677]">
               <th className="py-2 pr-3 font-semibold">Item</th>
               <th className="hidden py-2 pr-3 text-right font-semibold sm:table-cell">Rate</th>
               <th className="py-2 pr-3 text-right font-semibold">Qty</th>
@@ -90,16 +90,16 @@ export default function QuoteDocument({ selection, info, meta }: SharedQuote) {
             </div>
           )}
           {quote.discount > 0 && (
-            <div className="flex justify-between text-[#2563eb]">
+            <div className="flex justify-between text-[#4b708d]">
               <span>Discount</span>
               <span>−{peso(quote.discount)}</span>
             </div>
           )}
         </div>
 
-        <div className="tnum mt-4 flex items-center justify-between rounded-lg bg-[#2563eb] px-5 py-4 text-white">
+        <div className="tnum mt-4 flex items-center justify-between rounded-xl bg-[linear-gradient(135deg,#091525,#203a53_60%,#4b708d)] px-5 py-4 text-white">
           <span className="text-sm font-semibold uppercase tracking-wider">Total</span>
-          <span className="text-2xl font-bold">{peso(quote.total)}</span>
+          <span className="font-display text-3xl">{peso(quote.total)}</span>
         </div>
 
         {quote.recurringLines.map((l) => (

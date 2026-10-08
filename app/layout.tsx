@@ -1,9 +1,21 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Instrument_Sans, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
   variable: "--font-inter",
+  subsets: ["latin"],
+});
+
+const display = Instrument_Sans({
+  variable: "--font-display",
+  subsets: ["latin"],
+});
+
+const serif = Instrument_Serif({
+  variable: "--font-serif",
+  weight: "400",
+  style: ["italic"],
   subsets: ["latin"],
 });
 
@@ -19,7 +31,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} antialiased`}>{children}</body>
+      <body className={`${inter.variable} ${display.variable} ${serif.variable} antialiased`}>{children}</body>
     </html>
   );
 }

@@ -1,19 +1,33 @@
 @import "tailwindcss";
 
+/* Palette: night #091525 · deep #203A53 · steel #4B708D · mist #90B0C7 · frost #CADCEA */
 :root {
-  --bg: #07090d;
-  --surface: #0f141c;
-  --surface-2: #141b26;
-  --line: #1c2533;
-  --ink: #e6eaf0;
-  --muted: #8a96a8;
-  --primary: #2563eb;
-  --primary-hi: #3b82f6;
-  --accent: #60a5fa;
-  --warn: #f5b454;
+  --night: #091525;
+  --deep: #203a53;
+  --steel: #4b708d;
+  --mist: #90b0c7;
+  --frost: #cadcea;
+  --royal: #193a87;
+  --blush: #f4d3ca;
+
+  --bg: #030812;
+  --surface: rgba(144, 176, 199, 0.055);
+  --surface-2: rgba(144, 176, 199, 0.1);
+  --line: rgba(202, 220, 234, 0.13);
+  --ink: #edf3f8;
+  --muted: #90b0c7;
+  --primary: #4b708d;
+  --primary-hi: #90b0c7;
+  --accent: #cadcea;
+  --warn: #f4c7b8;
 }
 
 @theme inline {
+  --color-night: var(--night);
+  --color-deep: var(--deep);
+  --color-steel: var(--steel);
+  --color-mist: var(--mist);
+  --color-frost: var(--frost);
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
@@ -25,15 +39,20 @@
   --color-accent: var(--accent);
   --color-warn: var(--warn);
   --font-sans: var(--font-inter);
+  --font-display: var(--font-display);
+  --font-serif: var(--font-serif);
 }
 
 html {
   color-scheme: dark;
+  scroll-behavior: smooth;
 }
 
 body {
   background:
-    radial-gradient(1200px 600px at 85% -10%, rgba(37, 99, 235, 0.18), transparent 60%),
+    radial-gradient(900px 700px at -5% 35%, rgba(75, 112, 141, 0.42), transparent 62%),
+    radial-gradient(1100px 800px at 40% 0%, rgba(25, 58, 135, 0.38), transparent 60%),
+    radial-gradient(900px 900px at 100% 100%, rgba(32, 58, 83, 0.35), transparent 60%),
     var(--bg);
   background-attachment: fixed;
   color: var(--ink);
@@ -44,10 +63,95 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Frosted glass card, as in the reference style. */
+.glass {
+  background: linear-gradient(180deg, rgba(144, 176, 199, 0.09), rgba(144, 176, 199, 0.03));
+  border: 1px solid var(--line);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.dot-grid {
+  background-image: radial-gradient(rgba(202, 220, 234, 0.22) 1px, transparent 1.2px);
+  background-size: 14px 14px;
+}
+
+/* White headline with a soft glow; accent words use frost. */
+.headline {
+  color: #f6f9fc;
+  text-shadow: 0 0 32px rgba(202, 220, 234, 0.35);
+}
+
+/* Hero: cream/blush light falling into navy and black. */
+.hero-sky {
+  background:
+    radial-gradient(60% 55% at 100% 0%, rgba(244, 211, 202, 0.85), transparent 70%),
+    radial-gradient(55% 55% at 0% 0%, rgba(247, 244, 227, 0.95), transparent 70%),
+    linear-gradient(180deg, #c3d3d6 0%, #90b0c7 16%, #4b708d 34%, #203a53 52%, rgba(9, 21, 37, 0.85) 72%, rgba(3, 8, 18, 0) 100%);
+}
+
+/* Chrome capsule: white top, black bottom, vertical highlight streak. */
+.capsule {
+  position: relative;
+  width: var(--capsule-w, 64px);
+  height: calc(var(--capsule-w, 64px) * 2.75);
+  border-radius: 999px;
+  transform: rotate(32deg);
+  background: linear-gradient(180deg, #fbfcfd 0%, #dbe3ea 44%, #9aa6b1 49.5%, #0c1016 50.5%, #020305 80%, #1b222b 100%);
+  box-shadow:
+    0 45px 60px -25px rgba(0, 0, 0, 0.85),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  animation: float 7s ease-in-out infinite;
+}
+.capsule::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.45) 0%,
+    rgba(255, 255, 255, 0) 22%,
+    rgba(255, 255, 255, 0.85) 46%,
+    rgba(255, 255, 255, 0) 64%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
+  mix-blend-mode: soft-light;
+}
+.capsule::before {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 30%;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 1px;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: rotate(32deg) translateY(0);
+  }
+  50% {
+    transform: rotate(28deg) translateY(-8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .capsule {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 /* Quote page: light, printable document. */
 .quote-page {
   color-scheme: light;
-  background: #e9edf3;
+  background: linear-gradient(180deg, #dde7ef 0%, #eef3f7 40%);
 }
 
 @media print {

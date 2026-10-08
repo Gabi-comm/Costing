@@ -15,36 +15,36 @@ interface Props {
 export default function ItemCard({ item, qty, onChange, blockedBy }: Props) {
   const selected = qty > 0;
   const priceLabel = (
-    <span className="tnum text-sm font-semibold text-accent">
+    <span className="tnum font-display text-lg text-frost">
       {peso(item.price)}
-      <span className="font-normal text-muted">
+      <span className="font-sans text-sm text-mist">
         {item.unit === "qty" ? ` / ${item.unitLabel}` : item.recurring ? " / month" : ""}
       </span>
     </span>
   );
 
-  const shell = `group relative flex h-full flex-col gap-3 rounded-xl border p-4 text-left transition ${
+  const shell = `group relative flex h-full flex-col gap-3 overflow-hidden rounded-2xl border p-5 text-left backdrop-blur-xl transition duration-200 ${
     selected
-      ? "border-primary-hi bg-primary/10 shadow-[0_0_0_1px_var(--primary-hi),0_8px_30px_-12px_rgba(37,99,235,0.7)]"
-      : "border-line bg-surface hover:border-primary/60"
+      ? "border-mist/70 bg-[linear-gradient(160deg,rgba(75,112,141,0.38),rgba(32,58,83,0.22))] shadow-[0_0_0_1px_rgba(144,176,199,0.35),0_18px_40px_-18px_rgba(144,176,199,0.55)]"
+      : "border-line bg-[linear-gradient(180deg,rgba(144,176,199,0.07),rgba(144,176,199,0.02))] hover:border-mist/40 hover:bg-surface-2"
   }`;
 
   const body = (
     <>
       <div className="flex items-start justify-between gap-3">
-        <h3 className="font-semibold leading-snug text-ink">{item.name}</h3>
+        <h3 className="font-display text-lg leading-snug text-ink">{item.name}</h3>
         {item.unit === "flat" && (
           <span
             aria-hidden
-            className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border text-xs transition ${
-              selected ? "border-primary-hi bg-primary text-white" : "border-line bg-bg text-transparent"
+            className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border text-xs transition ${
+              selected ? "border-frost bg-frost text-night shadow-[0_0_14px_rgba(202,220,234,0.6)]" : "border-line bg-night/40 text-transparent"
             }`}
           >
             ✓
           </span>
         )}
       </div>
-      <p className="text-sm leading-relaxed text-muted">{item.description}</p>
+      <p className="text-sm leading-relaxed text-mist">{item.description}</p>
       {selected && blockedBy && (
         <p className="text-xs font-medium text-warn">Add {blockedBy} to include this.</p>
       )}
