@@ -79,9 +79,6 @@ export default function Calculator({ initial, persist }: Props) {
           <h2 className="headline font-display text-5xl font-normal leading-[0.95] tracking-tight sm:text-7xl">
             Build your <span className="font-serif italic text-frost">quote</span>
           </h2>
-          <p className="mt-4 max-w-md text-base text-mist">
-            Select services, set complexity and timeline, then send the client a quotation link or PDF.
-          </p>
         </div>
         {meta && <p className="tnum rounded-full border border-line px-3 py-1 text-xs text-mist">Quote {meta.number}</p>}
       </header>
