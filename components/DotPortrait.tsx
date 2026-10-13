@@ -10,11 +10,16 @@ const BUCKETS = 16;
 const AMBIENT = 0.22;
 /** Feather widths, in portrait cells, where the photo dissolves into the field. */
 const EDGE_FEATHER = 14;
-const BOTTOM_FEATHER = 30;
+const BOTTOM_FEATHER = 34;
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
+};
+/** Stable per-cell noise in [0, 1) so the dissolve is dithered, not a straight line. */
+const hash = (x: number, y: number) => {
+  const h = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+  return h - Math.floor(h);
 };
 
 /**
@@ -70,7 +75,7 @@ export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLEl
       for (let gy = 0; gy < gh; gy++) {
         const fy = ((gy + 0.5) * cell + oy) / height;
         // Fade in under the light sky, fade out before the next section.
-        const field = smooth(0.03, 0.14, fy) * (1 - smooth(Math.min(0.72, portraitBottom - 0.12), 1, fy));
+        const field = smooth(0.03, 0.14, fy) * (1 - smooth(Math.min(0.6, portraitBottom - 0.2), 1, fy));
         if (field <= 0) continue;
         for (let gx = 0; gx < gw; gx++) {
           const x = gx - shiftX, y = gy - shiftY;
@@ -80,12 +85,15 @@ export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLEl
           let s = AMBIENT * aura, m = 0, isWarm = false;
           if (dx === 0 && dy === 0) {
             const i = y * cols + x;
-            m = smooth(0, 1, Math.min(x / EDGE_FEATHER, (cols - 1 - x) / EDGE_FEATHER, y / EDGE_FEATHER, (rows - 1 - y) / BOTTOM_FEATHER));
+            // Shirt dissolves slowly and unevenly into the field below.
+            const bottom = (rows - 1 - y) / BOTTOM_FEATHER;
+            const dissolve = smooth(0, 1, bottom + (hash(x, y) - 0.5) * 0.35) ** 1.6;
+            m = Math.min(smooth(0, 1, Math.min(x, cols - 1 - x, y) / EDGE_FEATHER), dissolve);
             s = s * (1 - m) + (parseInt(levels[i], 16) / 15) * m;
             isWarm = warm[i] === "1" && m > 0.5;
           }
           s *= field;
-          if (s < 0.04) continue;
+          if (s < 0.012) continue;
           sx.push((gx + 0.5) * cell + ox);
           sy.push((gy + 0.5) * cell + oy);
           ss.push(isWarm ? -s : s);
@@ -110,7 +118,8 @@ export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLEl
 
       for (let k = 0; k < n; k++) {
         const s = Math.abs(ss[k]);
-        radius[k] = Math.max(0.45, Math.pow(s, 0.8) * cell * 0.62);
+        // No minimum size: faint dots shrink away instead of stopping at a line.
+        radius[k] = Math.pow(s, 0.8) * cell * 0.62;
         groups[(ss[k] < 0 ? BUCKETS : 0) + Math.min(BUCKETS - 1, Math.round(s * (BUCKETS - 1)))].dots.push(k);
         if (assembled) {
           px[k] = hx[k];
