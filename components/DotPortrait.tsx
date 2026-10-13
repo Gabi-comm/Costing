@@ -1,72 +1,128 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { PORTRAIT } from "@/lib/portrait-data";
 
 const FROST = "202, 220, 234";
 const WARM = "244, 177, 131";
 const BUCKETS = 16;
+/** Strength of the photo's backdrop dots; the ambient field continues at this level. */
+const AMBIENT = 0.22;
+/** Feather widths, in portrait cells, where the photo dissolves into the field. */
+const EDGE_FEATHER = 14;
+const BOTTOM_FEATHER = 30;
+
+const smooth = (a: number, b: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
 
 /**
- * Halftone portrait drawn on a canvas. Dots spring away from the pointer
- * and settle back; a slow shimmer runs while idle.
+ * Halftone field that fills its positioned parent. The portrait is drawn into
+ * the same dot lattice at the position of `anchorRef`, and its backdrop runs
+ * on as an ambient field, so the photo has no edge. Dots spring away from the
+ * pointer and settle back; a slow wave runs while idle.
  */
-export default function DotPortrait({ className = "" }: { className?: string }) {
+export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLElement | null> }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    const anchor = anchorRef.current;
     const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx) return;
+    if (!canvas || !anchor || !ctx) return;
 
     const { cols, rows, levels, warm } = PORTRAIT;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    // Keep only dots that are visible after the edge vignette.
-    const idx: number[] = [];
-    const strength: number[] = [];
-    for (let y = 0; y < rows; y++)
-      for (let x = 0; x < cols; x++) {
-        const i = y * cols + x;
-        const v = parseInt(levels[i], 16) / 15;
-        const d = Math.hypot((x + 0.5) / cols - 0.5, (y + 0.5) / rows - 0.5) / 0.5;
-        const fade = Math.min(1, Math.max(0, (1.12 - d) / 0.28));
-        const s = v * fade;
-        if (s < 0.04) continue;
-        idx.push(i);
-        strength.push(s);
-      }
-    const n = idx.length;
-    const hx = new Float32Array(n), hy = new Float32Array(n);
-    const px = new Float32Array(n), py = new Float32Array(n);
-    const vx = new Float32Array(n), vy = new Float32Array(n);
-    const radius = new Float32Array(n);
+    let n = 0;
+    let hx = new Float32Array(0), hy = new Float32Array(0);
+    let px = new Float32Array(0), py = new Float32Array(0);
+    let vx = new Float32Array(0), vy = new Float32Array(0);
+    let radius = new Float32Array(0), wave = new Float32Array(0);
     // Dots grouped by color and opacity so each group is one fill() per frame.
-    const groups: { style: string; dots: number[] }[] = [];
-    for (const rgb of [FROST, WARM])
-      for (let b = 0; b < BUCKETS; b++)
-        groups.push({ style: `rgba(${rgb}, ${(0.5 + 0.5 * (b / (BUCKETS - 1))).toFixed(3)})`, dots: [] });
-    for (let k = 0; k < n; k++) {
-      const b = Math.min(BUCKETS - 1, Math.round(strength[k] * (BUCKETS - 1)));
-      groups[(warm[idx[k]] === "1" ? BUCKETS : 0) + b].dots.push(k);
-    }
+    let groups: { style: string; dots: number[] }[] = [];
+    let width = 0, height = 0, cell = 0;
+    let halo = { x: 0, y: 0, r: 0 };
+    let assembled = reduceMotion;
 
-    let width = 0, cell = 0;
     const layout = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       width = canvas.clientWidth;
-      const height = width * (rows / cols);
+      height = canvas.clientHeight;
+      if (!width || !height) return;
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      cell = width / cols;
-      for (let k = 0; k < n; k++) {
-        const i = idx[k];
-        hx[k] = px[k] = ((i % cols) + 0.5) * cell;
-        hy[k] = py[k] = (Math.floor(i / cols) + 0.5) * cell;
-        vx[k] = vy[k] = 0;
-        radius[k] = Math.max(0.45, Math.pow(strength[k], 0.8) * cell * 0.62);
+
+      const c = canvas.getBoundingClientRect();
+      const a = anchor.getBoundingClientRect();
+      cell = a.width / cols;
+      const left = a.left - c.left, top = a.top - c.top;
+      // Lattice origin chosen so portrait cells land exactly on grid points.
+      const ox = ((left % cell) + cell) % cell, oy = ((top % cell) + cell) % cell;
+      const shiftX = Math.round((left - ox) / cell), shiftY = Math.round((top - oy) / cell);
+      const gw = Math.ceil(width / cell), gh = Math.ceil(height / cell);
+      const portraitBottom = (top + a.height) / height;
+      halo = { x: left + a.width / 2, y: top + a.height * 0.42, r: a.width * 0.55 };
+
+      const sx: number[] = [], sy: number[] = [], ss: number[] = [], sw: number[] = [], sm: number[] = [];
+      for (let gy = 0; gy < gh; gy++) {
+        const fy = ((gy + 0.5) * cell + oy) / height;
+        // Fade in under the light sky, fade out before the next section.
+        const field = smooth(0.03, 0.14, fy) * (1 - smooth(Math.min(0.72, portraitBottom - 0.12), 1, fy));
+        if (field <= 0) continue;
+        for (let gx = 0; gx < gw; gx++) {
+          const x = gx - shiftX, y = gy - shiftY;
+          // Distance (in cells) outside the portrait box; the field glows around it.
+          const dx = Math.max(-x, 0, x - (cols - 1)), dy = Math.max(-y, 0, y - (rows - 1));
+          const aura = 0.35 + 0.65 * Math.exp(-((dx * dx + dy * dy) / (34 * 34)));
+          let s = AMBIENT * aura, m = 0, isWarm = false;
+          if (dx === 0 && dy === 0) {
+            const i = y * cols + x;
+            m = smooth(0, 1, Math.min(x / EDGE_FEATHER, (cols - 1 - x) / EDGE_FEATHER, y / EDGE_FEATHER, (rows - 1 - y) / BOTTOM_FEATHER));
+            s = s * (1 - m) + (parseInt(levels[i], 16) / 15) * m;
+            isWarm = warm[i] === "1" && m > 0.5;
+          }
+          s *= field;
+          if (s < 0.04) continue;
+          sx.push((gx + 0.5) * cell + ox);
+          sy.push((gy + 0.5) * cell + oy);
+          ss.push(isWarm ? -s : s);
+          sw.push(0.1 + 0.22 * (1 - m));
+          sm.push(m);
+        }
       }
+
+      n = sx.length;
+      hx = Float32Array.from(sx);
+      hy = Float32Array.from(sy);
+      px = new Float32Array(n);
+      py = new Float32Array(n);
+      vx = new Float32Array(n);
+      vy = new Float32Array(n);
+      radius = new Float32Array(n);
+      wave = Float32Array.from(sw);
+      groups = [];
+      for (const rgb of [FROST, WARM])
+        for (let b = 0; b < BUCKETS; b++)
+          groups.push({ style: `rgba(${rgb}, ${(0.35 + 0.65 * (b / (BUCKETS - 1))).toFixed(3)})`, dots: [] });
+
+      for (let k = 0; k < n; k++) {
+        const s = Math.abs(ss[k]);
+        radius[k] = Math.max(0.45, Math.pow(s, 0.8) * cell * 0.62);
+        groups[(ss[k] < 0 ? BUCKETS : 0) + Math.min(BUCKETS - 1, Math.round(s * (BUCKETS - 1)))].dots.push(k);
+        if (assembled) {
+          px[k] = hx[k];
+          py[k] = hy[k];
+        } else {
+          // First paint: the field gathers in from a scattered, wider spread.
+          const spread = 1.35 + Math.random() * 0.5 + (1 - sm[k]) * 0.4;
+          px[k] = halo.x + (hx[k] - halo.x) * spread + (Math.random() - 0.5) * cell * 12;
+          py[k] = halo.y + (hy[k] - halo.y) * spread + (Math.random() - 0.5) * cell * 12;
+        }
+      }
+      assembled = true;
     };
 
     const pointer = { x: 0, y: 0, active: false };
@@ -74,7 +130,7 @@ export default function DotPortrait({ className = "" }: { className?: string }) 
       const rect = canvas.getBoundingClientRect();
       pointer.x = e.clientX - rect.left;
       pointer.y = e.clientY - rect.top;
-      pointer.active = true;
+      pointer.active = pointer.x >= 0 && pointer.y >= 0 && pointer.x <= rect.width && pointer.y <= rect.height;
     };
     const onLeave = () => (pointer.active = false);
     const onUp = (e: PointerEvent) => e.pointerType !== "mouse" && onLeave();
@@ -105,17 +161,25 @@ export default function DotPortrait({ className = "" }: { className?: string }) 
         py[k] += vy[k];
       }
 
-      ctx.clearRect(0, 0, width, width * (rows / cols));
-      for (const g of groups) {
-        if (!g.dots.length) continue;
+      ctx.clearRect(0, 0, width, height);
+      // Dark pool behind the subject so the face reads against the sky.
+      const g = ctx.createRadialGradient(halo.x, halo.y, 0, halo.x, halo.y, halo.r);
+      g.addColorStop(0, "rgba(3, 8, 18, 0.55)");
+      g.addColorStop(0.7, "rgba(3, 8, 18, 0.22)");
+      g.addColorStop(1, "rgba(3, 8, 18, 0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, width, height);
+
+      for (const grp of groups) {
+        if (!grp.dots.length) continue;
         ctx.beginPath();
-        for (const k of g.dots) {
-          const shimmer = 1 + 0.1 * Math.sin(t * 1.6 + hx[k] * 0.035 + hy[k] * 0.02);
-          const r = radius[k] * shimmer;
+        for (const k of grp.dots) {
+          // Slow diagonal swell; strongest out in the ambient field.
+          const r = radius[k] * (1 + wave[k] * Math.sin(t * 1.4 - hx[k] * 0.012 - hy[k] * 0.018));
           ctx.moveTo(px[k] + r, py[k]);
           ctx.arc(px[k], py[k], r, 0, Math.PI * 2);
         }
-        ctx.fillStyle = g.style;
+        ctx.fillStyle = grp.style;
         ctx.fill();
       }
       raf = requestAnimationFrame(frame);
@@ -129,34 +193,27 @@ export default function DotPortrait({ className = "" }: { className?: string }) 
 
     const ro = new ResizeObserver(() => layout());
     ro.observe(canvas);
+    ro.observe(anchor);
     const io = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
       if (visible) start();
     });
     io.observe(canvas);
-    canvas.addEventListener("pointermove", onMove);
-    canvas.addEventListener("pointerdown", onMove);
-    canvas.addEventListener("pointerleave", onLeave);
-    canvas.addEventListener("pointerup", onUp);
+    window.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener("pointerdown", onMove, { passive: true });
+    window.addEventListener("pointerup", onUp);
+    document.documentElement.addEventListener("pointerleave", onLeave);
 
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
       io.disconnect();
-      canvas.removeEventListener("pointermove", onMove);
-      canvas.removeEventListener("pointerdown", onMove);
-      canvas.removeEventListener("pointerleave", onLeave);
-      canvas.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerdown", onMove);
+      window.removeEventListener("pointerup", onUp);
+      document.documentElement.removeEventListener("pointerleave", onLeave);
     };
-  }, []);
+  }, [anchorRef]);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      role="img"
-      aria-label="Dot-art portrait of Gabriel John Solomon"
-      className={`block w-full touch-pan-y [filter:drop-shadow(0_0_10px_rgba(202,220,234,0.35))] ${className}`}
-      style={{ aspectRatio: `${PORTRAIT.cols} / ${PORTRAIT.rows}` }}
-    />
-  );
+  return <canvas ref={canvasRef} aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" />;
 }

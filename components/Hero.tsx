@@ -1,8 +1,15 @@
+"use client";
+
+import { useRef } from "react";
 import DotPortrait from "./DotPortrait";
+import { PORTRAIT } from "@/lib/portrait-data";
 
 export default function Hero() {
+  const portraitRef = useRef<HTMLDivElement>(null);
+
   return (
     <section className="hero-sky relative flex min-h-[92svh] flex-col overflow-hidden">
+      <DotPortrait anchorRef={portraitRef} />
       <nav className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-5 sm:px-6">
         <span className="font-display text-lg font-semibold tracking-tight text-night">
           Gabi-<span className="font-serif text-xl font-normal italic">comm</span>
@@ -15,7 +22,7 @@ export default function Hero() {
         </a>
       </nav>
 
-      <div className="mx-auto grid w-full max-w-7xl flex-1 items-center gap-6 px-4 pb-6 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
+      <div className="relative mx-auto grid w-full max-w-7xl flex-1 items-center gap-6 px-4 pb-6 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
         <div className="order-2 lg:order-1 lg:pt-24">
           <p className="font-serif text-3xl italic text-frost sm:text-4xl">Welcome!</p>
           <h1 className="headline mt-2 font-display text-5xl font-normal leading-[0.98] tracking-tight sm:text-7xl">
@@ -38,15 +45,17 @@ export default function Hero() {
         </div>
 
         <div className="relative order-1 mx-auto w-full max-w-[min(460px,86vw)] lg:order-2 lg:max-w-[620px] lg:pt-4">
+          {/* Empty slot: the field canvas draws the portrait here. */}
           <div
-            aria-hidden
-            className="absolute inset-[6%] rounded-full bg-[radial-gradient(closest-side,rgba(3,8,18,0.8),rgba(3,8,18,0.35)_70%,transparent)] blur-2xl"
+            ref={portraitRef}
+            role="img"
+            aria-label="Dot-art portrait of Gabriel John Solomon"
+            style={{ aspectRatio: `${PORTRAIT.cols} / ${PORTRAIT.rows}` }}
           />
-          <DotPortrait className="relative" />
         </div>
       </div>
 
-      <div className="mx-auto flex w-full max-w-7xl items-end justify-end gap-4 px-4 pb-8 text-xs text-mist sm:px-6">
+      <div className="relative mx-auto flex w-full max-w-7xl items-end justify-end gap-4 px-4 pb-8 text-xs text-mist sm:px-6">
         <a href="#projects" className="flex items-center gap-2 transition hover:text-frost">
           Start
           <span aria-hidden className="grid h-7 w-7 place-items-center rounded-full border border-line">
