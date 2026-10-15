@@ -254,7 +254,7 @@ export default function Intro() {
       }
     };
 
-    const drawBuf = new Float32Array((wn + cap) * 4);
+    let drawBuf = new Float32Array(0);
     let t0 = 0, last = 0, dissolveAt = 0, sweep = SWEEP;
 
     const startDissolve = (now: number, skipped: boolean) => {
@@ -391,6 +391,7 @@ export default function Intro() {
     fontsReady.then(() => {
       if (cancelled) return;
       sampleWordmark();
+      drawBuf = new Float32Array((wn + cap) * 4);
       raf = requestAnimationFrame(frame);
     });
 
