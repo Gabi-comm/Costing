@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type RefObject } from "react";
 import { PORTRAIT } from "@/lib/portrait-data";
+import { INTRO_REVEAL, introPlaying } from "./Intro";
 
 const FROST = "202, 220, 234";
 const WARM = "244, 177, 131";
@@ -50,6 +51,10 @@ export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLEl
     let width = 0, height = 0, cell = 0;
     let halo = { x: 0, y: 0, r: 0 };
     let assembled = reduceMotion;
+    // While the intro covers the page the dots wait scattered, then gather as the sand clears.
+    let held = introPlaying();
+    const onReveal = () => (held = false);
+    window.addEventListener(INTRO_REVEAL, onReveal);
 
     const layout = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -152,7 +157,7 @@ export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLEl
       const R = cell * 10;
       const R2 = R * R;
 
-      for (let k = 0; k < n; k++) {
+      for (let k = 0; k < n && !held; k++) {
         let tx = hx[k], ty = hy[k];
         if (pointer.active) {
           const dx = hx[k] - pointer.x, dy = hy[k] - pointer.y;
@@ -215,6 +220,7 @@ export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLEl
 
     return () => {
       cancelAnimationFrame(raf);
+      window.removeEventListener(INTRO_REVEAL, onReveal);
       ro.disconnect();
       io.disconnect();
       window.removeEventListener("pointermove", onMove);

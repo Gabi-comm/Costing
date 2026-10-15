@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import Calculator, { DRAFT_KEY } from "@/components/Calculator";
 import Footer from "@/components/Footer";
 import Hero from "@/components/Hero";
+import Intro from "@/components/Intro";
 import Projects from "@/components/Projects";
 import { EMPTY_SELECTION } from "@/lib/compute";
 import { decodeQuote, EMPTY_INFO } from "@/lib/share";
@@ -34,6 +35,7 @@ export default function CalculatorPage() {
 
   return (
     <>
+      <Intro />
       <Hero />
       <Projects />
       {source === null ? (

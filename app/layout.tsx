@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Instrument_Sans, Instrument_Serif } from "next/font/google";
 import "./globals.css";
+import { THEME_SCRIPT } from "@/lib/theme";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -21,7 +22,6 @@ const serif = Instrument_Serif({
 
 export const metadata: Metadata = {
   title: "Gabi-comm",
-  description: "Gabi-comm — freelance project cost calculator and client quotations.",
 };
 
 export default function RootLayout({
@@ -30,7 +30,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="dark" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className={`${inter.variable} ${display.variable} ${serif.variable} antialiased`}>{children}</body>
     </html>
   );
