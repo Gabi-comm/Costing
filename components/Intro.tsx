@@ -254,6 +254,7 @@ export default function Intro() {
       }
     };
 
+    const drawBuf = new Float32Array((wn + cap) * 4);
     let t0 = 0, last = 0, dissolveAt = 0, sweep = SWEEP;
 
     const startDissolve = (now: number, skipped: boolean) => {
@@ -318,7 +319,15 @@ export default function Intro() {
         if (eroded >= N) bg.clearRect(0, 0, W, H);
       }
 
-      const paths = COLORS.map(() => new Path2D());
+      // This frame's grains as (colour, x, y, size), drawn below one colour at a time.
+      let queued = 0;
+      const queue = (c: number, x: number, y: number, s: number) => {
+        const q = queued++ * 4;
+        drawBuf[q] = c;
+        drawBuf[q + 1] = x;
+        drawBuf[q + 2] = y;
+        drawBuf[q + 3] = s;
+      };
       let alive = 0;
 
       for (let k = 0; k < wn; k++) {
@@ -346,7 +355,7 @@ export default function Intro() {
           // Grains in flight are fine dust; they swell to full size as they land.
           s *= 0.45 + 0.55 * e;
         }
-        paths[wColor[k]].rect(wx[k] - s / 2, wy[k] - s / 2, s, s);
+        queue(wColor[k], wx[k] - s / 2, wy[k] - s / 2, s);
       }
 
       while (dFirst < dCount && dAge[dFirst] >= dLife[dFirst]) dFirst++;
@@ -356,15 +365,16 @@ export default function Intro() {
         dAge[k] += dt;
         blow(dvx, dvy, dx, dy, k, t, dt);
         const s = dSize[k] * (1 - (dAge[k] / dLife[k]) ** 2);
-        // Whole-pixel corners keep the rasteriser off the antialiasing path.
-        if (s > 0.1) paths[dColor[k]].rect(Math.round(dx[k]), Math.round(dy[k]), s, s);
+        if (s > 0.1) queue(dColor[k], dx[k], dy[k], s);
       }
 
+      // Plain rects, not one big path: the GPU takes them as simple quads.
       fx.clearRect(0, 0, W, H);
-      paths.forEach((path, c) => {
+      for (let c = 0; c < COLORS.length; c++) {
         fx.fillStyle = COLORS[c];
-        fx.fill(path);
-      });
+        for (let q = 0; q < queued * 4; q += 4)
+          if (drawBuf[q] === c) fx.fillRect(drawBuf[q + 1], drawBuf[q + 2], drawBuf[q + 3], drawBuf[q + 3]);
+      }
 
       if (p >= 1 && eroded >= N && alive === 0) {
         reveal();

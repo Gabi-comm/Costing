@@ -35,6 +35,21 @@ const hash = (x: number, y: number) => {
   return h - Math.floor(h);
 };
 
+const SPRITE = 32;
+/** A dot of one colour, pre-drawn once and scaled to size when stamped. */
+const group = (style: string) => {
+  const sprite = document.createElement("canvas");
+  sprite.width = sprite.height = SPRITE;
+  const c = sprite.getContext("2d");
+  if (c) {
+    c.fillStyle = style;
+    c.beginPath();
+    c.arc(SPRITE / 2, SPRITE / 2, SPRITE / 2 - 0.5, 0, Math.PI * 2);
+    c.fill();
+  }
+  return { style, sprite, dots: [] as number[] };
+};
+
 /**
  * Halftone field that fills its positioned parent. The portrait is drawn into
  * the same dot lattice at the position of `anchorRef`, and its backdrop runs
@@ -59,7 +74,7 @@ export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLEl
     let vx = new Float32Array(0), vy = new Float32Array(0);
     let radius = new Float32Array(0), wave = new Float32Array(0);
     // Dots grouped by color and opacity so each group is one fill() per frame.
-    let groups: { style: string; dots: number[] }[] = [];
+    let groups: { style: string; sprite: HTMLCanvasElement; dots: number[] }[] = [];
     let width = 0, height = 0, cell = 0;
     let halo = { x: 0, y: 0, r: 0 };
     let look = THEMES[getTheme()];
@@ -141,7 +156,7 @@ export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLEl
       groups = [];
       for (const rgb of [FROST, WARM, look.field])
         for (let b = 0; b < BUCKETS; b++)
-          groups.push({ style: `rgba(${rgb}, ${(0.35 + 0.65 * (b / (BUCKETS - 1))).toFixed(3)})`, dots: [] });
+          groups.push(group(`rgba(${rgb}, ${(0.35 + 0.65 * (b / (BUCKETS - 1))).toFixed(3)})`));
 
       for (let k = 0; k < n; k++) {
         const s = Math.abs(ss[k]);
@@ -207,24 +222,23 @@ export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLEl
       ctx.fillStyle = g;
       ctx.fillRect(halo.x - halo.r, halo.y - halo.r, halo.r * 2, halo.r * 2);
 
+      // Stamped, not traced: one huge path of arcs is slow for the GPU to fill,
+      // while rects and sprite copies go through as simple quads.
       for (const grp of groups) {
         if (!grp.dots.length) continue;
-        ctx.beginPath();
+        ctx.fillStyle = grp.style;
         for (const k of grp.dots) {
           // Slow diagonal swell; strongest out in the ambient field.
           const r = radius[k] * (1 + wave[k] * Math.sin(t * 1.4 - hx[k] * 0.012 - hy[k] * 0.018));
           if (r < 0.25) continue;
           if (r < SQUARE_BELOW) {
-            // At a pixel or two a square of equal area looks the same and fills far faster.
+            // At a pixel or two a square of equal area looks the same.
             const side = r * 1.7725;
-            ctx.rect(px[k] - side / 2, py[k] - side / 2, side, side);
+            ctx.fillRect(px[k] - side / 2, py[k] - side / 2, side, side);
           } else {
-            ctx.moveTo(px[k] + r, py[k]);
-            ctx.arc(px[k], py[k], r, 0, Math.PI * 2);
+            ctx.drawImage(grp.sprite, px[k] - r, py[k] - r, r * 2, r * 2);
           }
         }
-        ctx.fillStyle = grp.style;
-        ctx.fill();
       }
       raf = requestAnimationFrame(frame);
     };
