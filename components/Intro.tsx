@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { getTheme } from "@/lib/theme";
 
 /** Fired when the sand starts clearing, so the hero can gather in underneath. */
 export const INTRO_REVEAL = "gabi:intro-reveal";
@@ -18,14 +19,44 @@ export const introPlaying = () =>
   !window.matchMedia("(prefers-reduced-motion: reduce)").matches &&
   document.querySelector('.intro[data-state="playing"]') !== null;
 
-/** Grain colours: the hero sky's frost, mist, steel, blush and cream. */
-const COLORS = [
-  "rgba(202, 220, 234, 0.95)",
-  "rgba(144, 176, 199, 0.85)",
-  "rgba(75, 112, 141, 0.9)",
-  "rgba(244, 211, 202, 0.9)",
-  "rgba(247, 244, 227, 0.95)",
-];
+/**
+ * Per theme: the sky the sand sits on, and the grain colours by role
+ * (frost, mist, steel, blush, cream). Daylight swaps the light grains for ink.
+ */
+const LOOKS = {
+  dark: {
+    base: "#030812",
+    glows: [
+      ["75, 112, 141", 0.42],
+      ["25, 58, 135", 0.38],
+      ["32, 58, 83", 0.35],
+    ] as [string, number][],
+    grid: "rgba(202, 220, 234, 0.06)",
+    colors: [
+      "rgba(202, 220, 234, 0.95)",
+      "rgba(144, 176, 199, 0.85)",
+      "rgba(75, 112, 141, 0.9)",
+      "rgba(244, 211, 202, 0.9)",
+      "rgba(247, 244, 227, 0.95)",
+    ],
+  },
+  light: {
+    base: "#e9f0f5",
+    glows: [
+      ["144, 176, 199", 0.4],
+      ["244, 211, 202", 0.38],
+      ["202, 220, 234", 0.7],
+    ] as [string, number][],
+    grid: "rgba(23, 48, 77, 0.07)",
+    colors: [
+      "rgba(23, 48, 77, 0.95)",
+      "rgba(77, 103, 128, 0.85)",
+      "rgba(117, 148, 172, 0.85)",
+      "rgba(201, 128, 104, 0.9)",
+      "rgba(32, 58, 83, 0.9)",
+    ],
+  },
+};
 const [FROST, MIST, STEEL, BLUSH, CREAM] = [0, 1, 2, 3, 4];
 /** Weighted picks: [colour, weight] pairs. */
 const DUST_MIX = [[STEEL, 30], [MIST, 30], [FROST, 20], [BLUSH, 12], [CREAM, 8]];
@@ -45,8 +76,10 @@ const SWEEP = 2000;
 const SWEEP_SKIPPED = 1200;
 /** How ragged the sweeping edge is, as a share of the sweep. */
 const BAND = 0.34;
-/** Share of background cells that break off as a visible grain. */
+/** Share of background cells that break off as a visible grain... */
 const SPAWN = 0.22;
+/** ...up to this many, so big screens don't pay for more sand than they show. */
+const MAX_DUST = 3800;
 
 const hash = (x: number, y: number) => {
   const h = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
@@ -87,7 +120,8 @@ export default function Intro() {
     }
 
     const W = window.innerWidth, H = window.innerHeight;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    // Grains are a few pixels across; past 1.5x the extra resolution only costs frames.
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     for (const c of [bgCanvas, fxCanvas]) {
       c.width = Math.round(W * dpr);
       c.height = Math.round(H * dpr);
@@ -95,9 +129,12 @@ export default function Intro() {
     bg.setTransform(dpr, 0, 0, dpr, 0, 0);
     fx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // Night sky, matching the page body, with the halftone grid laid over it.
+    const look = LOOKS[getTheme()];
+    const COLORS = look.colors;
+
+    // The page's sky, matching the body, with the halftone grid laid over it.
     const paintSky = () => {
-      bg.fillStyle = "#030812";
+      bg.fillStyle = look.base;
       bg.fillRect(0, 0, W, H);
       const glow = (x: number, y: number, rx: number, ry: number, rgb: string, a: number, end: number) => {
         bg.save();
@@ -110,16 +147,17 @@ export default function Intro() {
         bg.fillRect(-1, -1, 2, 2);
         bg.restore();
       };
-      glow(-0.05 * W, 0.35 * H, 900, 700, "75, 112, 141", 0.42, 0.62);
-      glow(0.4 * W, 0, 1100, 800, "25, 58, 135", 0.38, 0.6);
-      glow(W, H, 900, 900, "32, 58, 83", 0.35, 0.6);
+      const [g1, g2, g3] = look.glows;
+      glow(-0.05 * W, 0.35 * H, 900, 700, g1[0], g1[1], 0.62);
+      glow(0.4 * W, 0, 1100, 800, g2[0], g2[1], 0.6);
+      glow(W, H, 900, 900, g3[0], g3[1], 0.6);
       bg.beginPath();
       for (let y = 7; y < H; y += 14)
         for (let x = 7; x < W; x += 14) {
           bg.moveTo(x + 1, y);
           bg.arc(x, y, 1, 0, Math.PI * 2);
         }
-      bg.fillStyle = "rgba(202, 220, 234, 0.06)";
+      bg.fillStyle = look.grid;
       bg.fill();
     };
     paintSky();
@@ -131,7 +169,7 @@ export default function Intro() {
       ((x + y * SLANT) / (W + H * SLANT)) * (1 - BAND) + (0.75 * noise(x / 220, y / 220) + 0.25 * grain) * BAND;
 
     // Background cells, ordered by when the wind reaches them.
-    const g = W < 700 ? 3 : 4;
+    const g = W < 700 ? 4 : 6;
     const gc = Math.ceil(W / g), gr = Math.ceil(H / g), N = gc * gr;
     const cellTh = new Float32Array(N);
     for (let j = 0; j < gr; j++)
@@ -140,7 +178,8 @@ export default function Intro() {
     let eroded = 0;
 
     // Loose grains that broke off the sky.
-    const cap = Math.ceil(N * SPAWN * 1.2);
+    const spawn = Math.min(SPAWN, MAX_DUST / N);
+    const cap = Math.ceil(N * spawn * 1.2);
     const dx = new Float32Array(cap), dy = new Float32Array(cap);
     const dvx = new Float32Array(cap), dvy = new Float32Array(cap);
     const dAge = new Float32Array(cap), dLife = new Float32Array(cap), dSize = new Float32Array(cap);
@@ -262,7 +301,7 @@ export default function Intro() {
           const k = order[eroded++];
           const cx = (k % gc) * g, cy = Math.floor(k / gc) * g;
           bg.rect(cx - 0.25, cy - 0.25, g + 0.5, g + 0.5);
-          if (dCount < cap && Math.random() < SPAWN) {
+          if (dCount < cap && Math.random() < spawn) {
             const d = dCount++;
             dx[d] = cx + Math.random() * g;
             dy[d] = cy + Math.random() * g;
@@ -317,7 +356,8 @@ export default function Intro() {
         dAge[k] += dt;
         blow(dvx, dvy, dx, dy, k, t, dt);
         const s = dSize[k] * (1 - (dAge[k] / dLife[k]) ** 2);
-        if (s > 0.1) paths[dColor[k]].rect(dx[k], dy[k], s, s);
+        // Whole-pixel corners keep the rasteriser off the antialiasing path.
+        if (s > 0.1) paths[dColor[k]].rect(Math.round(dx[k]), Math.round(dy[k]), s, s);
       }
 
       fx.clearRect(0, 0, W, H);

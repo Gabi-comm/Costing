@@ -19,7 +19,7 @@ export default function Hero() {
         <div className="flex items-center gap-2">
           <ThemeToggle className="text-[#091525] transition hover:bg-[#091525]/10" />
           <a
-            href="#calculator"
+            href="#quote"
             className="rounded-full bg-[#091525] px-4 py-2 text-sm font-medium text-[#cadcea] transition hover:bg-[#203a53]"
           >
             Build a quote
@@ -41,7 +41,7 @@ export default function Hero() {
             See projects
           </a>
           <a
-            href="#calculator"
+            href="#quote"
             className="inline-flex items-center gap-2 rounded-full bg-frost px-5 py-3 text-sm font-semibold text-night shadow-[0_10px_30px_-10px_rgba(202,220,234,0.6)] transition hover:bg-frost-hover"
           >
             Build a quote <span aria-hidden>↓</span>

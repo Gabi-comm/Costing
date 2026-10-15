@@ -73,7 +73,7 @@ export default function Calculator({ initial, persist }: Props) {
   const blockedIds = new Set(quote.blocked.map((b) => b.item.id));
 
   return (
-    <div id="calculator" className="mx-auto max-w-7xl scroll-mt-4 px-4 pb-10 pt-16 sm:px-6 lg:pb-12 lg:pt-24">
+    <div id="quote" className="mx-auto max-w-7xl scroll-mt-4 px-4 pb-10 pt-16 sm:px-6 lg:pb-12 lg:pt-24">
       <header className="mb-12 flex flex-wrap items-end justify-between gap-6">
         <div>
           <h2 className="headline font-display text-5xl font-normal leading-[0.95] tracking-tight sm:text-7xl">
