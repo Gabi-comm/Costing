@@ -122,7 +122,7 @@ export default function SummaryPanel({ quote, complexity, copied, onCopy, onOpen
           type="button"
           onClick={onOpen}
           disabled={empty}
-          className="rounded-full bg-frost px-4 py-3 text-sm font-semibold text-night shadow-[0_10px_30px_-10px_rgba(202,220,234,0.6)] transition hover:bg-white duration-300 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-full bg-frost px-4 py-3 text-sm font-semibold text-night shadow-[0_10px_30px_-10px_rgba(202,220,234,0.6)] transition hover:bg-frost-hover duration-300 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Open quotation
         </button>

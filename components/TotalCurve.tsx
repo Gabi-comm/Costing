@@ -100,8 +100,8 @@ export default function TotalCurve({ total }: { total: number }) {
     <div aria-hidden className="pointer-events-none relative -mx-6 mb-4 mt-5 h-28">
       <div className="dot-grid absolute inset-0 [mask-image:linear-gradient(to_top,black,transparent)]" />
       <svg viewBox={`0 0 ${W} 100`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
-        <path ref={restRef} fill="none" stroke="rgba(237,243,248,0.18)" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
-        <path ref={doneRef} fill="none" stroke="rgba(237,243,248,0.75)" strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
+        <path ref={restRef} fill="none" className="stroke-ink/20" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+        <path ref={doneRef} fill="none" className="stroke-ink/75" strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
       </svg>
       <span
         ref={dotRef}
@@ -109,7 +109,7 @@ export default function TotalCurve({ total }: { total: number }) {
         style={{ left: `${(xFor(total) / W) * 100}%`, top: `${curveY(xFor(total), 0)}%` }}
       >
         <span className="grid h-6 w-6 place-items-center rounded-full bg-frost/20">
-          <span className="h-2.5 w-2.5 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.9)]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-ink shadow-[0_0_12px_var(--headline-glow)]" />
         </span>
       </span>
     </div>
