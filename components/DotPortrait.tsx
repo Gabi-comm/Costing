@@ -16,8 +16,7 @@ const THEMES = {
   dark: { field: FROST, pool: "3, 8, 18", poolAlpha: [0.55, 0.22], poolSize: 0.55 },
   light: { field: "75, 112, 141", pool: "40, 72, 104", poolAlpha: [0.82, 0.4], poolSize: 0.66 },
 };
-const BUCKETS = 16;
-/** Dots smaller than this radius (CSS px) are drawn as squares. */
+/** Dots smaller than this radius (CSS px) are drawn as squares of equal area. */
 const SQUARE_BELOW = 1.5;
 /** Strength of the photo's backdrop dots; the ambient field continues at this level. */
 const AMBIENT = 0.22;
@@ -35,20 +34,7 @@ const hash = (x: number, y: number) => {
   return h - Math.floor(h);
 };
 
-const SPRITE = 32;
-/** A dot of one colour, pre-drawn once and scaled to size when stamped. */
-const group = (style: string) => {
-  const sprite = document.createElement("canvas");
-  sprite.width = sprite.height = SPRITE;
-  const c = sprite.getContext("2d");
-  if (c) {
-    c.fillStyle = style;
-    c.beginPath();
-    c.arc(SPRITE / 2, SPRITE / 2, SPRITE / 2 - 0.5, 0, Math.PI * 2);
-    c.fill();
-  }
-  return { style, sprite, dots: [] as number[] };
-};
+const rgbOf = (s: string) => s.split(",").map(Number) as [number, number, number];
 
 /**
  * Halftone field that fills its positioned parent. The portrait is drawn into
@@ -58,12 +44,14 @@ const group = (style: string) => {
  */
 export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLElement | null> }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const poolRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const anchor = anchorRef.current;
+    const pool = poolRef.current;
     const ctx = canvas?.getContext("2d");
-    if (!canvas || !anchor || !ctx) return;
+    if (!canvas || !anchor || !pool || !ctx) return;
 
     const { cols, rows, levels, warm } = PORTRAIT;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -73,8 +61,12 @@ export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLEl
     let px = new Float32Array(0), py = new Float32Array(0);
     let vx = new Float32Array(0), vy = new Float32Array(0);
     let radius = new Float32Array(0), wave = new Float32Array(0);
-    // Dots grouped by color and opacity so each group is one fill() per frame.
-    let groups: { style: string; sprite: HTMLCanvasElement; dots: number[] }[] = [];
+    // Per-dot colour and opacity.
+    let cr = new Uint8Array(0), cg = new Uint8Array(0), cb = new Uint8Array(0), ca = new Float32Array(0);
+    // Dots are written straight into one pixel buffer and uploaded once per frame:
+    // tens of thousands of separate draw calls swamp integrated GPUs.
+    let img: ImageData | null = null, data = new Uint8ClampedArray(0), data32 = new Uint32Array(0);
+    let dw = 0, dh = 0, dpr = 1;
     let width = 0, height = 0, cell = 0;
     let halo = { x: 0, y: 0, r: 0 };
     let look = THEMES[getTheme()];
@@ -89,13 +81,15 @@ export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLEl
 
     const layout = () => {
       // Tens of thousands of dots redraw every frame; past 1.5x the extra pixels cost more than they show.
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       width = canvas.clientWidth;
       height = canvas.clientHeight;
       if (!width || !height) return;
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      dw = canvas.width = Math.round(width * dpr);
+      dh = canvas.height = Math.round(height * dpr);
+      img = ctx.createImageData(dw, dh);
+      data = img.data;
+      data32 = new Uint32Array(data.buffer);
 
       const c = canvas.getBoundingClientRect();
       const a = anchor.getBoundingClientRect();
@@ -108,6 +102,16 @@ export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLEl
       const portraitBottom = (top + a.height) / height;
       look = THEMES[getTheme()];
       halo = { x: left + a.width / 2, y: top + a.height * 0.42, r: a.width * look.poolSize };
+      // Dark pool behind the subject so the face reads against the sky. It never
+      // moves, so it is a plain CSS layer rather than repainted every frame.
+      const [a0, a1] = look.poolAlpha;
+      Object.assign(pool.style, {
+        left: `${halo.x - halo.r}px`,
+        top: `${halo.y - halo.r}px`,
+        width: `${halo.r * 2}px`,
+        height: `${halo.r * 2}px`,
+        background: `radial-gradient(circle closest-side, rgba(${look.pool}, ${a0}), rgba(${look.pool}, ${a1}) 70%, rgba(${look.pool}, 0))`,
+      });
 
       const sf: number[] = [], sx: number[] = [], sy: number[] = [], ss: number[] = [], sw: number[] = [], sm: number[] = [];
       for (let gy = 0; gy < gh; gy++) {
@@ -153,16 +157,18 @@ export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLEl
       vy = new Float32Array(n);
       radius = new Float32Array(n);
       wave = Float32Array.from(sw);
-      groups = [];
-      for (const rgb of [FROST, WARM, look.field])
-        for (let b = 0; b < BUCKETS; b++)
-          groups.push(group(`rgba(${rgb}, ${(0.35 + 0.65 * (b / (BUCKETS - 1))).toFixed(3)})`));
+      cr = new Uint8Array(n);
+      cg = new Uint8Array(n);
+      cb = new Uint8Array(n);
+      ca = new Float32Array(n);
+      const tones = [rgbOf(FROST), rgbOf(WARM), rgbOf(look.field)];
 
       for (let k = 0; k < n; k++) {
         const s = Math.abs(ss[k]);
         // No minimum size: faint dots shrink away instead of stopping at a line.
         radius[k] = Math.pow(s, 0.8) * cell * 0.62;
-        groups[(ss[k] < 0 ? BUCKETS : sf[k] ? BUCKETS * 2 : 0) + Math.min(BUCKETS - 1, Math.round(s * (BUCKETS - 1)))].dots.push(k);
+        [cr[k], cg[k], cb[k]] = tones[ss[k] < 0 ? 1 : sf[k] ? 2 : 0];
+        ca[k] = (0.35 + 0.65 * Math.min(1, s)) * 255;
         if (assembled) {
           px[k] = hx[k];
           py[k] = hy[k];
@@ -213,33 +219,44 @@ export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLEl
         py[k] += vy[k];
       }
 
-      ctx.clearRect(0, 0, width, height);
-      // Dark pool behind the subject so the face reads against the sky.
-      const g = ctx.createRadialGradient(halo.x, halo.y, 0, halo.x, halo.y, halo.r);
-      g.addColorStop(0, `rgba(${look.pool}, ${look.poolAlpha[0]})`);
-      g.addColorStop(0.7, `rgba(${look.pool}, ${look.poolAlpha[1]})`);
-      g.addColorStop(1, `rgba(${look.pool}, 0)`);
-      ctx.fillStyle = g;
-      ctx.fillRect(halo.x - halo.r, halo.y - halo.r, halo.r * 2, halo.r * 2);
-
-      // Stamped, not traced: one huge path of arcs is slow for the GPU to fill,
-      // while rects and sprite copies go through as simple quads.
-      for (const grp of groups) {
-        if (!grp.dots.length) continue;
-        ctx.fillStyle = grp.style;
-        for (const k of grp.dots) {
-          // Slow diagonal swell; strongest out in the ambient field.
-          const r = radius[k] * (1 + wave[k] * Math.sin(t * 1.4 - hx[k] * 0.012 - hy[k] * 0.018));
-          if (r < 0.25) continue;
-          if (r < SQUARE_BELOW) {
-            // At a pixel or two a square of equal area looks the same.
-            const side = r * 1.7725;
-            ctx.fillRect(px[k] - side / 2, py[k] - side / 2, side, side);
-          } else {
-            ctx.drawImage(grp.sprite, px[k] - r, py[k] - r, r * 2, r * 2);
+      if (!img) return;
+      data32.fill(0);
+      // Coverage-weighted pixel write; where dots overlap the stronger one wins.
+      const plot = (ix: number, iy: number, cov: number, k: number) => {
+        if (ix < 0 || iy < 0 || ix >= dw || iy >= dh || cov <= 0) return;
+        const alpha = cov * ca[k];
+        const i = (iy * dw + ix) * 4;
+        if (alpha <= data[i + 3]) return;
+        data[i] = cr[k];
+        data[i + 1] = cg[k];
+        data[i + 2] = cb[k];
+        data[i + 3] = alpha;
+      };
+      for (let k = 0; k < n; k++) {
+        // Slow diagonal swell; strongest out in the ambient field.
+        const r = radius[k] * (1 + wave[k] * Math.sin(t * 1.4 - hx[k] * 0.012 - hy[k] * 0.018));
+        if (r < 0.25) continue;
+        const cx = px[k] * dpr, cy = py[k] * dpr;
+        if (r < SQUARE_BELOW) {
+          // At a pixel or two a square of equal area looks the same as a circle.
+          const h = r * 0.886 * dpr;
+          const x0 = cx - h, x1 = cx + h, y0 = cy - h, y1 = cy + h;
+          for (let iy = Math.floor(y0); iy < y1; iy++) {
+            const covY = Math.min(y1, iy + 1) - Math.max(y0, iy);
+            for (let ix = Math.floor(x0); ix < x1; ix++) plot(ix, iy, (Math.min(x1, ix + 1) - Math.max(x0, ix)) * covY, k);
+          }
+        } else {
+          const R = r * dpr;
+          for (let iy = Math.floor(cy - R); iy < cy + R; iy++) {
+            const dy = iy + 0.5 - cy;
+            for (let ix = Math.floor(cx - R); ix < cx + R; ix++) {
+              const dx = ix + 0.5 - cx;
+              plot(ix, iy, Math.min(1, R + 0.5 - Math.sqrt(dx * dx + dy * dy)), k);
+            }
           }
         }
       }
+      ctx.putImageData(img, 0, 0);
       raf = requestAnimationFrame(frame);
     };
     const start = () => {
@@ -276,5 +293,10 @@ export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLEl
     };
   }, [anchorRef]);
 
-  return <canvas ref={canvasRef} aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" />;
+  return (
+    <>
+      <div ref={poolRef} aria-hidden className="pointer-events-none absolute" />
+      <canvas ref={canvasRef} aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" />
+    </>
+  );
 }
