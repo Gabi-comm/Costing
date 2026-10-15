@@ -2,24 +2,24 @@
 
 import { useEffect, useRef, type RefObject } from "react";
 import { PORTRAIT } from "@/lib/portrait-data";
+import { PORTRAIT_INK } from "@/lib/portrait-ink-data";
 import { INTRO_REVEAL, introPlaying } from "./Intro";
 import { getTheme, subscribeTheme } from "@/lib/theme";
 
 const FROST = "202, 220, 234";
 const WARM = "244, 177, 131";
 /**
- * The portrait stays light-on-dark in both themes (inverting it would read as a
- * photo negative). In daylight it sits in a pool of deep blue sky instead of
- * night, and the open field turns steel so it shows on the pale page.
+ * Night: light dots for brightness over a dark pool. Daylight: navy ink for
+ * darkness on paper, like a printed halftone, from its own sampling of the
+ * photo (scripts/make-portrait-ink.mjs) with the backdrop cut out.
  */
 const THEMES = {
-  dark: { field: FROST, pool: "3, 8, 18", poolAlpha: [0.55, 0.22], poolSize: 0.55 },
-  light: { field: "75, 112, 141", pool: "40, 72, 104", poolAlpha: [0.82, 0.4], poolSize: 0.66 },
+  // ambient: strength of the open field around the photo.
+  dark: { ink: false, subject: FROST, warm: WARM, field: FROST, ambient: 0.22, pool: "3, 8, 18", poolAlpha: [0.55, 0.22], poolSize: 0.55 },
+  light: { ink: true, subject: "23, 48, 77", warm: "201, 110, 64", field: "75, 112, 141", ambient: 0.035, pool: "", poolAlpha: [0, 0], poolSize: 0.55 },
 };
 /** Dots smaller than this radius (CSS px) are drawn as squares of equal area. */
 const SQUARE_BELOW = 1.5;
-/** Strength of the photo's backdrop dots; the ambient field continues at this level. */
-const AMBIENT = 0.22;
 /** Feather widths, in portrait cells, where the photo dissolves into the field. */
 const EDGE_FEATHER = 14;
 const BOTTOM_FEATHER = 34;
@@ -53,7 +53,7 @@ export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLEl
     const ctx = canvas?.getContext("2d");
     if (!canvas || !anchor || !pool || !ctx) return;
 
-    const { cols, rows, levels, warm } = PORTRAIT;
+    const { cols, rows } = PORTRAIT;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     let n = 0;
@@ -110,9 +110,15 @@ export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLEl
         top: `${halo.y - halo.r}px`,
         width: `${halo.r * 2}px`,
         height: `${halo.r * 2}px`,
-        background: `radial-gradient(circle closest-side, rgba(${look.pool}, ${a0}), rgba(${look.pool}, ${a1}) 70%, rgba(${look.pool}, 0))`,
+        background: look.pool
+          ? `radial-gradient(circle closest-side, rgba(${look.pool}, ${a0}), rgba(${look.pool}, ${a1}) 70%, rgba(${look.pool}, 0))`
+          : "none",
       });
 
+      // Night reads brightness; daylight reads ink, with how much of each dot is
+      // the figure, so the cut-out edge is soft rather than stepped.
+      const src = look.ink ? PORTRAIT_INK : PORTRAIT;
+      // Tone per dot: 0 subject, 1 warm (the sunglasses), 2 field.
       const sf: number[] = [], sx: number[] = [], sy: number[] = [], ss: number[] = [], sw: number[] = [], sm: number[] = [];
       for (let gy = 0; gy < gh; gy++) {
         const fy = ((gy + 0.5) * cell + oy) / height;
@@ -124,25 +130,28 @@ export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLEl
           // Distance (in cells) outside the portrait box; the field glows around it.
           const dx = Math.max(-x, 0, x - (cols - 1)), dy = Math.max(-y, 0, y - (rows - 1));
           const aura = 0.35 + 0.65 * Math.exp(-((dx * dx + dy * dy) / (34 * 34)));
-          let s = AMBIENT * aura, m = 0, isWarm = false;
+          const ambient = look.ambient * aura;
+          let s = ambient, m = 0, isWarm = false, isSubject = false;
           if (dx === 0 && dy === 0) {
             const i = y * cols + x;
             // Shirt dissolves slowly and unevenly into the field below.
             const bottom = (rows - 1 - y) / BOTTOM_FEATHER;
             const dissolve = smooth(0, 1, bottom + (hash(x, y) - 0.5) * 0.35) ** 1.6;
             m = Math.min(smooth(0, 1, Math.min(x, cols - 1 - x, y) / EDGE_FEATHER), dissolve);
-            s = s * (1 - m) + (parseInt(levels[i], 16) / 15) * m;
-            isWarm = warm[i] === "1" && m > 0.5;
+            const v = parseInt(src.levels[i], 16) / 15;
+            const cover = look.ink ? parseInt(PORTRAIT_INK.cover[i], 16) / 15 : 1;
+            // Where the backdrop shows through, daylight prints the plain field instead.
+            const photo = ambient * (1 - cover) + v * cover;
+            s = s * (1 - m) + photo * m;
+            isWarm = src.warm[i] === "1" && m > 0.5;
+            isSubject = m > 0.5 && cover > 0.5;
           }
           s *= field;
           if (s < 0.012) continue;
           sx.push((gx + 0.5) * cell + ox);
           sy.push((gy + 0.5) * cell + oy);
           ss.push(isWarm ? -s : s);
-          // Field tone outside the pool of sky, frost inside it, with a dithered seam.
-          const px0 = (gx + 0.5) * cell + ox - halo.x, py0 = (gy + 0.5) * cell + oy - halo.y;
-          const out = Math.hypot(px0, py0) / halo.r > 0.62 + (hash(gx, gy) - 0.5) * 0.4;
-          sf.push(!isWarm && out && (m < 0.5 || s < 0.5) ? 1 : 0);
+          sf.push(isWarm ? 1 : isSubject ? 0 : 2);
           sw.push(0.1 + 0.22 * (1 - m));
           sm.push(m);
         }
@@ -161,13 +170,14 @@ export default function DotPortrait({ anchorRef }: { anchorRef: RefObject<HTMLEl
       cg = new Uint8Array(n);
       cb = new Uint8Array(n);
       ca = new Float32Array(n);
-      const tones = [rgbOf(FROST), rgbOf(WARM), rgbOf(look.field)];
+      const tones = [rgbOf(look.subject), rgbOf(look.warm), rgbOf(look.field)];
 
       for (let k = 0; k < n; k++) {
         const s = Math.abs(ss[k]);
         // No minimum size: faint dots shrink away instead of stopping at a line.
-        radius[k] = Math.pow(s, 0.8) * cell * 0.62;
-        [cr[k], cg[k], cb[k]] = tones[ss[k] < 0 ? 1 : sf[k] ? 2 : 0];
+        // Ink spreads by area, so its radius follows the square root of the tone.
+        radius[k] = look.ink ? Math.sqrt(s) * cell * 0.56 : Math.pow(s, 0.8) * cell * 0.62;
+        [cr[k], cg[k], cb[k]] = tones[sf[k]];
         ca[k] = (0.35 + 0.65 * Math.min(1, s)) * 255;
         if (assembled) {
           px[k] = hx[k];
